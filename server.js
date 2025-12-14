@@ -18,7 +18,19 @@ const qrDatabase = {
     ownerPhone: '+57 300 123 4567',
     ownerEmail: 'fabian@alphatech.com',
     petBreed: 'Doberman',
-    petColor: 'Negro y marrón',
+    petColor: 'Black and brown',
+    emergencyContact: '+57 300 987 6543',
+    isActive: true
+  },
+  'PET686293B4': {
+    petId: 'lesly-pet-id',
+    petName: 'lesly',
+    ownerId: '0581b193-636f-4df5-828d-d1426fa2b014',
+    ownerName: 'Noah',
+    ownerPhone: '+57 300 123 4567',
+    ownerEmail: 'noah123@mail.com',
+    petBreed: 'Doberman',
+    petColor: 'Black and brown',
     emergencyContact: '+57 300 987 6543',
     isActive: true
   }
@@ -28,7 +40,7 @@ const qrDatabase = {
 app.get('/found/:qrCode', async (req, res) => {
   const { qrCode } = req.params;
   
-  console.log(`🔍 QR Code escaneado: ${qrCode}`);
+  // console.log(`🔍 QR Code escaneado: ${qrCode}`);
   
   const petData = qrDatabase[qrCode];
   
@@ -37,7 +49,7 @@ app.get('/found/:qrCode', async (req, res) => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>QR No Válido - Alpha Tech</title>
+        <title>Invalid QR Code - Alpha Tech</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
@@ -49,7 +61,7 @@ app.get('/found/:qrCode', async (req, res) => {
       <body>
         <div class="container">
           <div class="error">❌</div>
-          <h2>QR No Válido</h2>
+          <h2>Invalid QR Code</h2>
           <p>Este código QR no está registrado o ha sido desactivado.</p>
           <p>Si crees que esto es un error, contacta a Alpha Tech.</p>
         </div>
@@ -60,7 +72,7 @@ app.get('/found/:qrCode', async (req, res) => {
 
   // Registrar el escaneo
   try {
-    await axios.post('https://prefers-cheapest-blues-parental.trycloudflare.com/api/notifications', {
+    await axios.post('http://localhost:3003/notifications', {
       type: 'PET_FOUND',
       title: '🐕 Mascota Encontrada',
       message: `¡Alguien ha escaneado el QR de ${petData.petName}! Revisa la ubicación.`,
@@ -74,7 +86,7 @@ app.get('/found/:qrCode', async (req, res) => {
         userAgent: req.headers['user-agent']
       }
     });
-    console.log(`✅ Notificación enviada al dueño de ${petData.petName}`);
+    // console.log(`✅ Notificación enviada al dueño de ${petData.petName}`);
   } catch (error) {
     console.error('❌ Error enviando notificación:', error.message);
   }
@@ -84,7 +96,7 @@ app.get('/found/:qrCode', async (req, res) => {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>¡Mascota Encontrada! - Alpha Tech</title>
+      <title>Pet Found! - Alpha Tech</title>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
@@ -135,8 +147,8 @@ app.get('/found/:qrCode', async (req, res) => {
       <div class="container">
         <div class="header">
           <div class="pet-icon">🐕</div>
-          <h1>¡Mascota Encontrada!</h1>
-          <p>Gracias por ayudar a reunir a <strong>${petData.petName}</strong> con su familia</p>
+          <h1>Pet Found!</h1>
+          <p>Thank you for helping a reunir a <strong>${petData.petName}</strong> con su familia</p>
         </div>
 
         <div class="pet-info">
@@ -188,23 +200,69 @@ app.get('/found/:qrCode', async (req, res) => {
   `);
 });
 
-// Endpoint para registrar nuevos QR codes
-app.post('/qr/register', (req, res) => {
+// Endpoint para registro automático desde el backend
+app.post('/qr/auto-register', (req, res) => {
   const { qrCode, petData } = req.body;
   
+  if (!qrCode || !petData) {
+    return res.status(400).json({
+      success: false,
+      message: 'qrCode y petData son requeridos'
+    });
+  }
+  
+  // Registrar el QR code con los datos de la mascota
   qrDatabase[qrCode] = {
-    ...petData,
+    petId: petData.petId,
+    petName: petData.petName,
+    ownerId: petData.ownerId,
+    ownerName: petData.ownerName,
+    ownerPhone: petData.ownerPhone,
+    ownerEmail: petData.ownerEmail,
+    petBreed: petData.petBreed,
+    petColor: petData.petColor,
+    emergencyContact: petData.emergencyContact,
+    isActive: petData.isActive,
+    createdAt: new Date().toISOString()
+  };
+  
+  // console.log(`✅ QR Code auto-registrado: ${qrCode} para ${petData.petName}`);
+  
+  res.json({
+    success: true,
+    message: 'QR Code registrado automáticamente',
+    qrCode,
+    url: `http://localhost:3004/found/${qrCode}`
+  });
+});
+
+// Endpoint para registrar nuevos QR codes
+app.post('/qr/register', (req, res) => {
+  const { petName, ownerName, phone } = req.body;
+  
+  const qrCode = `PET${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+  
+  qrDatabase[qrCode] = {
+    petId: `pet-${Date.now()}`,
+    petName,
+    ownerId: `owner-${Date.now()}`,
+    ownerName,
+    ownerPhone: phone,
+    ownerEmail: `${(ownerName || 'unknown').toLowerCase()}@example.com`,
+    petBreed: 'Mixed',
+    petColor: 'Unknown',
+    emergencyContact: phone,
     isActive: true,
     createdAt: new Date().toISOString()
   };
   
-  console.log(`✅ QR Code registrado: ${qrCode} para ${petData.petName}`);
+  // console.log(`✅ QR Code registrado: ${qrCode} para ${petName}`);
   
   res.json({
     success: true,
     message: 'QR Code registrado exitosamente',
     qrCode,
-    url: `${req.protocol}://${req.get('host')}/found/${qrCode}`
+    url: `http://localhost:3004/found/${qrCode}`
   });
 });
 
@@ -217,22 +275,22 @@ app.get('/qr/list', (req, res) => {
 app.post('/collar/emergency', (req, res) => {
   const { petId, action, settings } = req.body;
   
-  console.log(`🚨 Collar Emergency Command: ${action} for pet ${petId}`);
+  // console.log(`🚨 Collar Emergency Command: ${action} for pet ${petId}`);
   
   switch (action) {
     case 'ACTIVATE_LOST_MODE':
-      console.log(`✅ Lost mode ACTIVATED for pet ${petId}`);
-      console.log(`   - Sound: ${settings?.soundEnabled ? 'ON' : 'OFF'}`);
-      console.log(`   - Lights: ${settings?.lightEnabled ? 'ON' : 'OFF'}`);
-      console.log(`   - Sound interval: ${settings?.soundInterval || 30}s`);
+      // console.log(`✅ Lost mode ACTIVATED for pet ${petId}`);
+      // console.log(`   - Sound: ${settings?.soundEnabled ? 'ON' : 'OFF'}`);
+      // console.log(`   - Lights: ${settings?.lightEnabled ? 'ON' : 'OFF'}`);
+      // console.log(`   - Sound interval: ${settings?.soundInterval || 30}s`);
       break;
       
     case 'DEACTIVATE_LOST_MODE':
-      console.log(`✅ Lost mode DEACTIVATED for pet ${petId}`);
+      // console.log(`✅ Lost mode DEACTIVATED for pet ${petId}`);
       break;
   }
   
-  console.log(`📡 Sending command to ESP32 collar...`);
+  // console.log(`📡 Sending command to ESP32 collar...`);
   
   res.json({
     success: true,
@@ -258,6 +316,6 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🏷️ Alpha Tech QR Service running on port ${PORT}`);
-  console.log(`📱 QR Codes registrados: ${Object.keys(qrDatabase).length}`);
+  // console.log(`🏷️ Alpha Tech QR Service running on port ${PORT}`);
+  // console.log(`📱 QR Codes registrados: ${Object.keys(qrDatabase).length}`);
 });
